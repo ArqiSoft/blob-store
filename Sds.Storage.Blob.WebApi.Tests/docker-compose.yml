@@ -1,0 +1,85 @@
+version: '3.4'
+
+services:
+  postgres:
+    image: postgres
+    environment:
+      POSTGRES_USER: keycloak
+      POSTGRES_PASSWORD: keycloak
+      POSTGRES_DATABASE: keycloak
+      POSTGRES_ROOT_PASSWORD: keycloak
+      pgdata: data-pstgresql
+    networks:
+      - blob-test
+
+  rabbitmq:
+    image: docker.your-company.com/osdr-rabbitmq:3.6
+    hostname: "rabbitmq-test"
+    environment:
+      - RABBITMQ_DEFAULT_VHOST=osdr_test
+    # ports:
+    #   - "8282:5672"
+    #   - "5672:5672"
+    networks:
+      - blob-test
+
+  keycloak:
+    build: KeyCloak
+    environment:
+      DB_VENDOR: POSTGRES
+      KEYCLOAK_USER: admin
+      KEYCLOAK_PASSWORD: admin
+      POSTGRES_USER: keycloak
+      POSTGRES_PASSWORD: keycloak
+      POSTGRES_PORT_5432_TCP_ADDR: postgres
+      POSTGRES_DATABASE: keycloak
+      JDBC_PARAMS: 'connectTimeout=30'
+    # ports:
+    #  - "8080:8080"
+    networks:
+      - blob-test
+    depends_on:
+      - postgres
+
+  mongo:
+    image: mongo:3.6
+    # ports:
+    #   - "27017:27017"
+    networks:
+      - blob-test
+
+  blob-storage-api:
+    container_name: blob-storage-api
+    image: docker.your-company.com/blob-storage-webapi:ci-${BUILD_NUMBER}
+    entrypoint: /bin/bash
+    environment:
+      - IDENTITY_SERVER_URL=http://keycloak:8080/auth/realms/OSDR
+      - OSDR_LOG_FOLDER=/logs
+      - OSDR_MONGO_DB=mongodb://mongo:27017/osdr
+      - OSDR_RABBIT_MQ=rabbitmq://guest:guest@rabbitmq:5672/osdr_test
+      - SWAGGER_BASEPATH=/blob/v1
+    command: ./wait-for-it.sh rabbitmq:15672 -t 30 -- ./wait-for-it.sh keycloak:8080 -t 30 -- ./Sds.Storage.Blob.WebApi
+    volumes:
+      - ${OSDR_LOG_FOLDER}:/logs
+    networks:
+      - blob-test
+    # ports:
+    #   - "18006:18006"
+
+  integration:
+    container_name: blob-storage-webapi-tests
+    image: docker.your-company.com/blob-storage-webapi-tests:ci-${BUILD_NUMBER}
+    entrypoint: /bin/bash
+    environment:
+      - IDENTITY_SERVER_URL=http://keycloak:8080/auth/realms/OSDR
+      - OSDR_LOG_FOLDER=/logs
+      - OSDR_RABBIT_MQ=rabbitmq://guest:guest@rabbitmq:5672/osdr_test
+    command: ./wait-for-it.sh http://blob-storage-api:18006 -t 30 -- dotnet vstest ./Sds.Storage.Blob.WebApi.Tests.dll /logger:"trx;LogFileName=blobstorage-webapi-tests-results-${BUILD_NUMBER}.xml" /ResultsDirectory:/results
+    volumes:
+      - ${OSDR_LOG_FOLDER}:/logs
+      - /results:/results
+    networks:
+      - blob-test
+
+networks:
+  blob-test:
