@@ -13,7 +13,8 @@
     <Copyright>Copyright 2017 (c) Science Data Software. All rights reserved.</Copyright>
     <PackageTags>domain storage blob</PackageTags>
     <Version>0.13.0</Version>
-    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>    
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <PackageLicenseUrl>https://opensource.org/licenses/MIT</PackageLicenseUrl>    
   </PropertyGroup>
 
   <ItemGroup>
