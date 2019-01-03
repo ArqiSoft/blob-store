@@ -18,7 +18,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Sds.MassTransit" Version="3.0.2" />
+    <PackageReference Include="Sds.MassTransit" Version="3.0.3" />
   </ItemGroup>
 
 </Project>
