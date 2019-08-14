@@ -64,7 +64,8 @@ namespace Sds.Storage.Blob.WebApi.IntegrationTests
 
             var request = new HttpRequestMessage(HttpMethod.Post, new Uri(Authority, "protocol/openid-connect/token")) { Content = new FormUrlEncodedContent(nvc) };
 
-            var json = await SendAsync(request).Result.Content.ReadAsStringAsync();
+            var response = await SendAsync(request);
+            var json = await response.Content.ReadAsStringAsync();
 
             return JsonConvert.DeserializeObject<Token>(json);
         }

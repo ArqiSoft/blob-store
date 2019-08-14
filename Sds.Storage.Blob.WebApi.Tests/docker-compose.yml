@@ -13,13 +13,13 @@ services:
       - blob-test
 
   rabbitmq:
-    image: docker.your-company.com/osdr-rabbitmq:3.6
-    hostname: "rabbitmq-test"
+    image: leanda/rabbitmq
+    hostname: "leanda"
     environment:
-      - RABBITMQ_DEFAULT_VHOST=osdr_test
-    # ports:
-    #   - "8282:5672"
-    #   - "5672:5672"
+      - RABBITMQ_DEFAULT_VHOST=leanda
+    ports:
+      - "8282:5672"
+      - "5672:5672"
     networks:
       - blob-test
 
@@ -34,8 +34,8 @@ services:
       POSTGRES_PORT_5432_TCP_ADDR: postgres
       POSTGRES_DATABASE: keycloak
       JDBC_PARAMS: 'connectTimeout=30'
-    # ports:
-    #  - "8080:8080"
+    ports:
+     - "8080:8080"
     networks:
       - blob-test
     depends_on:
@@ -43,20 +43,20 @@ services:
 
   mongo:
     image: mongo:3.6
-    # ports:
-    #   - "27017:27017"
+    ports:
+      - "27017:27017"
     networks:
       - blob-test
 
   blob-storage-api:
     container_name: blob-storage-api
-    image: docker.your-company.com/blob-storage-webapi:ci-${BUILD_NUMBER}
+    image: leanda/blob-storage-webapi:${TAG_VERSION-latest}
     entrypoint: /bin/bash
     environment:
       - IDENTITY_SERVER_URL=http://keycloak:8080/auth/realms/OSDR
       - OSDR_LOG_FOLDER=/logs
-      - OSDR_MONGO_DB=mongodb://mongo:27017/osdr
-      - OSDR_RABBIT_MQ=rabbitmq://guest:guest@rabbitmq:5672/osdr_test
+      - OSDR_MONGO_DB=mongodb://mongo:27017/leanda
+      - OSDR_RABBIT_MQ=rabbitmq://guest:guest@rabbitmq:5672/leanda
       - SWAGGER_BASEPATH=/blob/v1
     command: ./wait-for-it.sh rabbitmq:15672 -t 30 -- ./wait-for-it.sh keycloak:8080 -t 30 -- ./Sds.Storage.Blob.WebApi
     volumes:
@@ -67,13 +67,14 @@ services:
     #   - "18006:18006"
 
   integration:
-    container_name: blob-storage-webapi-tests
-    image: docker.your-company.com/blob-storage-webapi-tests:ci-${BUILD_NUMBER}
+    container_name: blob-storage-api-integration
+    image: leanda/blob-storage-webapi-integration:${TAG_VERSION-latest}
     entrypoint: /bin/bash
     environment:
-      - IDENTITY_SERVER_URL=http://keycloak:8080/auth/realms/OSDR
+      - IDENTITY_SERVER_URL=http://keycloak:8080/auth/realms/OSDR/
+      - OSDR_BLOB_STORAGE_API=http://blob-storage-api:18006/api/blobs/
       - OSDR_LOG_FOLDER=/logs
-      - OSDR_RABBIT_MQ=rabbitmq://guest:guest@rabbitmq:5672/osdr_test
+      - OSDR_RABBIT_MQ=rabbitmq://guest:guest@rabbitmq:5672/leanda
     command: ./wait-for-it.sh http://blob-storage-api:18006 -t 30 -- dotnet vstest ./Sds.Storage.Blob.WebApi.Tests.dll /logger:"trx;LogFileName=blobstorage-webapi-tests-results-${BUILD_NUMBER}.xml" /ResultsDirectory:/results
     volumes:
       - ${OSDR_LOG_FOLDER}:/logs

@@ -1,29 +1,27 @@
-﻿using System;
+﻿using Collector.Serilog.Enrichers.Assembly;
+using MassTransit;
+using MassTransit.RabbitMqTransport;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.Features;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Sds.Storage.Blob.GridFs;
-using Sds.Storage.Blob.Core;
-using Serilog;
-using System.Net;
-using IdentityModel.AspNetCore.OAuth2Introspection;
-using MassTransit;
-using MassTransit.RabbitMqTransport;
-using Swashbuckle.AspNetCore.Swagger;
 using Microsoft.Extensions.PlatformAbstractions;
-using System.IO;
-using Sds.Storage.Blob.WebApi.Swagger;
-using Sds.MassTransit.Observers;
-using Collector.Serilog.Enrichers.Assembly;
-using Newtonsoft.Json.Serialization;
-using IdentityServer4.AccessTokenValidation;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
+using MongoDB.Driver;
+using Sds.MassTransit.Observers;
+using Sds.Storage.Blob.Core;
+using Sds.Storage.Blob.GridFs;
+using Sds.Storage.Blob.WebApi.Swagger;
+using Serilog;
+using Swashbuckle.AspNetCore.Swagger;
+using System;
+using System.IO;
+using System.Net;
 using System.Threading.Tasks;
-using Microsoft.AspNetCore.Http.Features;
 
 namespace Sds.Storage.Blob.WebApi
 {
@@ -51,8 +49,13 @@ namespace Sds.Storage.Blob.WebApi
         // This method gets called by the runtime. Use this method to add services to the container
         public void ConfigureServices(IServiceCollection services)
         {
-            services.AddTransient<IBlobStorage, GridFsStorage>(
-                x => new GridFsStorage(Environment.ExpandEnvironmentVariables(Configuration["OsdrConnectionSettings:ConnectionString"]), Configuration["OsdrConnectionSettings:DatabaseName"]));
+            var mongoConnectionString = Environment.ExpandEnvironmentVariables(Configuration["OsdrConnectionSettings:ConnectionString"]);
+            var mongoUrl = new MongoUrl(mongoConnectionString);
+
+            Log.Information($"Connecting to MongoDB {mongoConnectionString}");
+            services.AddTransient<IBlobStorage, GridFsStorage>(x => new GridFsStorage(x.GetService<IMongoDatabase>()));
+            services.AddSingleton(new MongoClient(mongoUrl));
+            services.AddSingleton(service => service.GetService<MongoClient>().GetDatabase(mongoUrl.DatabaseName));
 
             services.AddSingleton<IConfiguration>(Configuration);
 
