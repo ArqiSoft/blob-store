@@ -1,0 +1,50 @@
+language: minimal
+
+services:
+  - docker
+
+branches:
+  only:
+    - master
+
+os:
+  - linux
+
+env:
+  global:
+    - DATE=`TZ=America/New_York date "+%Y-%m-%d-%H%M"`
+    - DOCKER_CACHE_FILE=/home/travis/docker/docker-cache.tar
+    - LEANDA_BLOB_STORAGE_WEBAPI_IMAGE="leanda/blob-storage-webapi"
+    - LEANDA_BLOB_STORAGE_WEBAPI_INTEGRATION_TESTS_IMAGE="leanda/blob-storage-webapi-integration"
+
+cache:
+  directories:
+    - /home/travis/docker/
+
+jobs:
+  include:
+    - stage: Build
+      name: Build Leanda Blob Storage Web API service
+      script: 
+        - docker build -t $LEANDA_BLOB_STORAGE_WEBAPI_IMAGE:ci -f Sds.Storage.Blob.WebApi/Dockerfile .
+        - if [ -d $DOCKER_CACHE_FILE ]; then rm $DOCKER_CACHE_FILE; fi
+        - docker save -o $DOCKER_CACHE_FILE $LEANDA_BLOB_STORAGE_WEBAPI_IMAGE:ci
+    - stage: Integration tests
+      name: Run Web API integration tests
+      script:
+        - docker load -i $DOCKER_CACHE_FILE
+        - docker build -t $LEANDA_BLOB_STORAGE_WEBAPI_INTEGRATION_TESTS_IMAGE:ci -f Sds.Storage.Blob.WebApi.Tests/Dockerfile .
+        - docker images
+        - yes | cp -rf Sds.Storage.Blob.WebApi.Tests/.env.travis-ci Sds.Storage.Blob.WebApi.Tests/.env
+        - cd Sds.Storage.Blob.WebApi.Tests && docker-compose up --abort-on-container-exit
+    - stage: Deploy
+      name: Deploy new image to docker hub
+      script:
+        - docker load -i $DOCKER_CACHE_FILE
+        - docker tag $LEANDA_BLOB_STORAGE_WEBAPI_IMAGE:ci $LEANDA_BLOB_STORAGE_WEBAPI_IMAGE:latest
+        - docker tag $LEANDA_BLOB_STORAGE_WEBAPI_IMAGE:ci $LEANDA_BLOB_STORAGE_WEBAPI_IMAGE:$DATE
+        - docker images
+        - docker login -u="$DOCKER_USERNAME" -p="$DOCKER_PASSWORD"
+        - docker push $LEANDA_BLOB_STORAGE_WEBAPI_IMAGE:latest
+        - docker push $LEANDA_BLOB_STORAGE_WEBAPI_IMAGE:$DATE
+        - rm -f $DOCKER_CACHE_FILE
