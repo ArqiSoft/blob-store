@@ -46,6 +46,8 @@ namespace Sds.Storage.Blob.WebApi
 
         public IConfigurationRoot Configuration { get; }
 
+        public long MaxBlobSize { get; private set; }
+
         // This method gets called by the runtime. Use this method to add services to the container
         public void ConfigureServices(IServiceCollection services)
         {
@@ -94,7 +96,8 @@ namespace Sds.Storage.Blob.WebApi
             });
             var authorityUrl = Environment.ExpandEnvironmentVariables(Configuration["IdentityServer:Authority"]);
             Log.Information($"Identity server: {authorityUrl}");
-
+            MaxBlobSize = Convert.ToInt64(Environment.ExpandEnvironmentVariables(Configuration["MaxRequestSize"]));
+            Log.Information($"Maximum size for blob to upload: {MaxBlobSize} bytes");
             services.AddAuthentication(o =>
             {
                 o.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
@@ -186,7 +189,7 @@ namespace Sds.Storage.Blob.WebApi
             app.UseMvc();
             app.Run(async context =>
             {
-                context.Features.Get<IHttpMaxRequestBodySizeFeature>().MaxRequestBodySize = Convert.ToInt64(Configuration["MaxRequestSize"]) ;
+                context.Features.Get<IHttpMaxRequestBodySizeFeature>().MaxRequestBodySize = MaxBlobSize;
             });
 
             var busControl = app.ApplicationServices.GetService<IBusControl>();
