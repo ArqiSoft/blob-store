@@ -98,6 +98,7 @@ namespace Sds.Storage.Blob.WebApi
             Log.Information($"Identity server: {authorityUrl}");
             MaxBlobSize = Convert.ToInt64(Environment.ExpandEnvironmentVariables(Configuration["MaxRequestSize"]));
             Log.Information($"Maximum size for blob to upload: {MaxBlobSize} bytes");
+            services.Configure<FormOptions>(x => x.MultipartBodyLengthLimit = MaxBlobSize);
             services.AddAuthentication(o =>
             {
                 o.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
@@ -153,7 +154,6 @@ namespace Sds.Storage.Blob.WebApi
             loggerFactory.AddConsole(Configuration.GetSection("Logging"));
             loggerFactory.AddDebug();
             loggerFactory.AddSerilog();
-           
             app.UseExceptionHandler(options =>
             {
                 options.Run(async context =>
@@ -185,12 +185,12 @@ namespace Sds.Storage.Blob.WebApi
                     .AllowAnyMethod()
                     .AllowAnyHeader()
                     .AllowCredentials());
-
-            app.UseMvc();
             app.Run(async context =>
             {
                 context.Features.Get<IHttpMaxRequestBodySizeFeature>().MaxRequestBodySize = MaxBlobSize;
             });
+
+            app.UseMvc();
 
             var busControl = app.ApplicationServices.GetService<IBusControl>();
 
