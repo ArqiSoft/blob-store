@@ -13,6 +13,8 @@ using Microsoft.AspNetCore.Authorization;
 using Sds.Storage.Blob.Domain.Dto;
 using System.IO;
 using System.Linq;
+using Sds.Storage.Blob.WebApi.Settings;
+using Microsoft.Extensions.Options;
 
 namespace Sds.Blob.Storage.WebApi
 {
@@ -22,6 +24,7 @@ namespace Sds.Blob.Storage.WebApi
     {
         private readonly IBlobStorage _blobStorage;
         private readonly IBusControl _bus;
+        private readonly RequestSizeSettings _requestSizeSettings;
 
         private Guid? UserID
         {
@@ -36,10 +39,26 @@ namespace Sds.Blob.Storage.WebApi
             }
         }
 
-        public BlobsController(IBlobStorage blobStorage, IBusControl bus)
+        private long MaxRequestSize
         {
-            this._blobStorage = blobStorage ?? throw new ArgumentNullException(nameof(blobStorage));
-            this._bus = bus ?? throw new ArgumentNullException(nameof(bus));
+            get
+            {
+                try
+                {
+                    return long.Parse(Environment.ExpandEnvironmentVariables(_requestSizeSettings.MaxRequestSize));
+                }
+                catch
+                {
+                    return _requestSizeSettings.DefaultRequestSize;
+                }
+            }
+        }
+
+        public BlobsController(IBlobStorage blobStorage, IBusControl bus, IOptions<RequestSizeSettings> requestSizeSettings)
+        {
+            _blobStorage = blobStorage ?? throw new ArgumentNullException(nameof(blobStorage));
+            _bus = bus ?? throw new ArgumentNullException(nameof(bus));
+            _requestSizeSettings = requestSizeSettings?.Value ?? throw new ArgumentNullException(nameof(requestSizeSettings));
         }
         
         /// <summary>
@@ -137,6 +156,11 @@ namespace Sds.Blob.Storage.WebApi
                 if (contentDisposition.IsFileDisposition())
                 {
                     var fileSection = section.AsFileSection();
+
+                    if(fileSection.FileStream.Length > MaxRequestSize)
+                    {
+                        return StatusCode(Microsoft.AspNetCore.Http.StatusCodes.Status413PayloadTooLarge);
+                    }
 
                     Log.Information($"Saving file {fileSection.FileName}");
 

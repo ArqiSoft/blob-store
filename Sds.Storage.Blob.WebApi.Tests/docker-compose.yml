@@ -64,6 +64,11 @@ services:
       - ${OSDR_LOG_FOLDER}:/logs
     networks:
       - blob-test
+    depends_on:
+      - keycloak
+      - mongo
+      - rabbitmq
+
     # ports:
     #   - "18006:18006"
 
@@ -82,6 +87,8 @@ services:
       - /results:/results
     networks:
       - blob-test
+    depends_on:
+      - blob-storage-api
 
 networks:
   blob-test:

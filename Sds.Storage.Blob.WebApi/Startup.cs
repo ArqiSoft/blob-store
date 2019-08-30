@@ -9,12 +9,14 @@ using Microsoft.AspNetCore.Http.Features;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Microsoft.Extensions.PlatformAbstractions;
 using Microsoft.IdentityModel.Tokens;
 using MongoDB.Driver;
 using Sds.MassTransit.Observers;
 using Sds.Storage.Blob.Core;
 using Sds.Storage.Blob.GridFs;
+using Sds.Storage.Blob.WebApi.Settings;
 using Sds.Storage.Blob.WebApi.Swagger;
 using Serilog;
 using Swashbuckle.AspNetCore.Swagger;
@@ -46,14 +48,11 @@ namespace Sds.Storage.Blob.WebApi
 
         public IConfigurationRoot Configuration { get; }
 
-        public long MaxBlobSize { get; private set; }
-
         // This method gets called by the runtime. Use this method to add services to the container
         public void ConfigureServices(IServiceCollection services)
         {
             var mongoConnectionString = Environment.ExpandEnvironmentVariables(Configuration["OsdrConnectionSettings:ConnectionString"]);
             var mongoUrl = new MongoUrl(mongoConnectionString);
-
             Log.Information($"Connecting to MongoDB {mongoConnectionString}");
             services.AddTransient<IBlobStorage, GridFsStorage>(x => new GridFsStorage(x.GetService<IMongoDatabase>()));
             services.AddSingleton(new MongoClient(mongoUrl));
@@ -96,9 +95,21 @@ namespace Sds.Storage.Blob.WebApi
             });
             var authorityUrl = Environment.ExpandEnvironmentVariables(Configuration["IdentityServer:Authority"]);
             Log.Information($"Identity server: {authorityUrl}");
-            MaxBlobSize = Convert.ToInt64(Environment.ExpandEnvironmentVariables(Configuration["MaxRequestSize"]));
-            Log.Information($"Maximum size for blob to upload: {MaxBlobSize} bytes");
-            services.Configure<FormOptions>(x => x.MultipartBodyLengthLimit = MaxBlobSize);
+
+            services.Configure<RequestSizeSettings>(Configuration.GetSection("BlobsUploadSettings"));
+
+            long maxBlobSize;
+            try
+            {
+                maxBlobSize = long.Parse(Environment.ExpandEnvironmentVariables(Configuration["BlobsUploadSettings:MaxRequestSize"]));
+            }
+            catch
+            {
+                maxBlobSize = long.Parse(Environment.ExpandEnvironmentVariables(Configuration["BlobsUploadSettings:DefaultRequestSize"]));
+            }
+
+            Log.Information($"Maximum size for blob to upload: {maxBlobSize} bytes");
+
             services.AddAuthentication(o =>
             {
                 o.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
@@ -185,10 +196,6 @@ namespace Sds.Storage.Blob.WebApi
                     .AllowAnyMethod()
                     .AllowAnyHeader()
                     .AllowCredentials());
-            app.Run(async context =>
-            {
-                context.Features.Get<IHttpMaxRequestBodySizeFeature>().MaxRequestBodySize = MaxBlobSize;
-            });
 
             app.UseMvc();
 
