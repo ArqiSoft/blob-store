@@ -5,7 +5,6 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Http.Features;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -16,11 +15,14 @@ using MongoDB.Driver;
 using Sds.MassTransit.Observers;
 using Sds.Storage.Blob.Core;
 using Sds.Storage.Blob.GridFs;
+using Sds.Storage.Blob.WebApi.Converters;
+using Sds.Storage.Blob.WebApi.Middlewares;
 using Sds.Storage.Blob.WebApi.Settings;
 using Sds.Storage.Blob.WebApi.Swagger;
 using Serilog;
 using Swashbuckle.AspNetCore.Swagger;
 using System;
+using System.ComponentModel;
 using System.IO;
 using System.Net;
 using System.Threading.Tasks;
@@ -31,10 +33,13 @@ namespace Sds.Storage.Blob.WebApi
     {
         public Startup(IHostingEnvironment env)
         {
+            TypeDescriptor.AddAttributes(typeof(long), new TypeConverterAttribute(typeof(EnvironmentInt64Converter)));
+
             var builder = new ConfigurationBuilder()
                 .SetBasePath(env.ContentRootPath)
                 .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
-                .AddJsonFile($"appsettings.{env.EnvironmentName}.json", optional: true);
+                .AddJsonFile($"appsettings.{env.EnvironmentName}.json", optional: true)
+                .AddEnvironmentVariables();
 
             builder.AddEnvironmentVariables();
             Configuration = builder.Build();
@@ -47,6 +52,8 @@ namespace Sds.Storage.Blob.WebApi
         }
 
         public IConfigurationRoot Configuration { get; }
+
+        private IServiceProvider Container { get; set; }
 
         // This method gets called by the runtime. Use this method to add services to the container
         public void ConfigureServices(IServiceCollection services)
@@ -97,18 +104,6 @@ namespace Sds.Storage.Blob.WebApi
             Log.Information($"Identity server: {authorityUrl}");
 
             services.Configure<RequestSizeSettings>(Configuration.GetSection("BlobsUploadSettings"));
-
-            long maxBlobSize;
-            try
-            {
-                maxBlobSize = long.Parse(Environment.ExpandEnvironmentVariables(Configuration["BlobsUploadSettings:MaxRequestSize"]));
-            }
-            catch
-            {
-                maxBlobSize = long.Parse(Environment.ExpandEnvironmentVariables(Configuration["BlobsUploadSettings:DefaultRequestSize"]));
-            }
-
-            Log.Information($"Maximum size for blob to upload: {maxBlobSize} bytes");
 
             services.AddAuthentication(o =>
             {
@@ -165,15 +160,7 @@ namespace Sds.Storage.Blob.WebApi
             loggerFactory.AddConsole(Configuration.GetSection("Logging"));
             loggerFactory.AddDebug();
             loggerFactory.AddSerilog();
-            app.UseExceptionHandler(options =>
-            {
-                options.Run(async context =>
-                {
-                    context.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
-                    await context.Response.WriteAsync("Internal server error. Try again letter");
-                });
-            });
-
+            app.UseBlobStorageMiddleware();
             app.UseStaticFiles();
             app.UseAuthentication();
 
@@ -199,8 +186,10 @@ namespace Sds.Storage.Blob.WebApi
 
             app.UseMvc();
 
-            var busControl = app.ApplicationServices.GetService<IBusControl>();
+            var blobSettings = app.ApplicationServices.GetService<IOptions<RequestSizeSettings>>().Value;
+            Log.Information($"Maximum size for blob to upload: {blobSettings.MaxRequestSize} bytes");
 
+            var busControl = app.ApplicationServices.GetService<IBusControl>();
             busControl.ConnectPublishObserver(new PublishObserver());
             busControl.ConnectConsumeObserver(new ConsumeObserver());
 

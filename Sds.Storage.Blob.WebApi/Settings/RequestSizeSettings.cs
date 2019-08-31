@@ -2,7 +2,6 @@
 {
     public class RequestSizeSettings
     {
-        public string MaxRequestSize { get; set; }
-        public long DefaultRequestSize { get; set; }
+        public long MaxRequestSize { get; set; } = 10240;
     }
 }
