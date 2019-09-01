@@ -103,7 +103,7 @@ namespace Sds.Storage.Blob.WebApi
             var authorityUrl = Environment.ExpandEnvironmentVariables(Configuration["IdentityServer:Authority"]);
             Log.Information($"Identity server: {authorityUrl}");
 
-            services.Configure<RequestSizeSettings>(Configuration.GetSection("BlobsUploadSettings"));
+            services.Configure<BlobStorageSettings>(Configuration.GetSection("BlobsUploadSettings"));
 
             services.AddAuthentication(o =>
             {
@@ -186,7 +186,7 @@ namespace Sds.Storage.Blob.WebApi
 
             app.UseMvc();
 
-            var blobSettings = app.ApplicationServices.GetService<IOptions<RequestSizeSettings>>().Value;
+            var blobSettings = app.ApplicationServices.GetService<IOptions<BlobStorageSettings>>().Value;
             Log.Information($"Maximum size for blob to upload: {blobSettings.MaxRequestSize} bytes");
 
             var busControl = app.ApplicationServices.GetService<IBusControl>();

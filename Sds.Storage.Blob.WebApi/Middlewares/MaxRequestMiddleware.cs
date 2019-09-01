@@ -9,12 +9,12 @@ using System.Threading.Tasks;
 
 namespace Sds.Storage.Blob.WebApi.Middlewares
 {
-    public class BlobStorageMiddleware
+    public class MaxRequestMiddleware
     {
         private readonly RequestDelegate _next;
-        private readonly RequestSizeSettings _settings;
+        private readonly BlobStorageSettings _settings;
 
-        public BlobStorageMiddleware(RequestDelegate next, IOptions<RequestSizeSettings> settings)
+        public MaxRequestMiddleware(RequestDelegate next, IOptions<BlobStorageSettings> settings)
         {
             _next = next ?? throw new ArgumentNullException(nameof(next));
             _settings = settings?.Value;
@@ -25,21 +25,6 @@ namespace Sds.Storage.Blob.WebApi.Middlewares
             if (context.Request.ContentLength > _settings.MaxRequestSize)
             {
                 context.Response.StatusCode = (int)HttpStatusCode.RequestEntityTooLarge;
-                return;
-            }
-
-            try
-            {
-                await _next(context);
-            }
-            catch (Exception ex)
-            {
-                context.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
-
-                if (!context.Response.HasStarted)
-                {
-                    await context.Response.WriteAsync(ex.ToString());
-                }
             }
         }
     }
@@ -53,7 +38,7 @@ namespace Sds.Storage.Blob.WebApi.Middlewares
                 throw new ArgumentNullException(nameof(app));
             }
 
-            return app.UseMiddleware<BlobStorageMiddleware>();
+            return app.UseMiddleware<MaxRequestMiddleware>();
         }
     }
 }
