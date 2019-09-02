@@ -2,6 +2,6 @@
 {
     public class BlobStorageSettings
     {
-        public long MaxRequestSize { get; set; } = 10240;
+        public long MaxRequestSize { get; set; } = 10240 * 1024;
     }
 }
