@@ -81,7 +81,7 @@ services:
       - OSDR_BLOB_STORAGE_API=http://blob-storage-api:18006/api/blobs/
       - OSDR_LOG_FOLDER=/logs
       - OSDR_RABBIT_MQ=rabbitmq://guest:guest@rabbitmq:5672/leanda
-    command: ./wait-for-it.sh http://blob-storage-api:18006 -t 30 -- dotnet vstest ./Sds.Storage.Blob.WebApi.Tests.dll /logger:"trx;LogFileName=blobstorage-webapi-tests-results-${BUILD_NUMBER}.xml" /ResultsDirectory:/results
+    command: ./wait-for-it.sh blob-storage-api:18006 -t 30 -- dotnet vstest ./Sds.Storage.Blob.WebApi.Tests.dll /logger:"trx;LogFileName=blobstorage-webapi-tests-results-${BUILD_NUMBER}.xml" /ResultsDirectory:/results
     volumes:
       - ${OSDR_LOG_FOLDER}:/logs
       - /results:/results

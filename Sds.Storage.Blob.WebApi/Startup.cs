@@ -103,7 +103,7 @@ namespace Sds.Storage.Blob.WebApi
             var authorityUrl = Environment.ExpandEnvironmentVariables(Configuration["IdentityServer:Authority"]);
             Log.Information($"Identity server: {authorityUrl}");
 
-            services.Configure<BlobStorageSettings>(Configuration.GetSection("BlobsUploadSettings"));
+            services.Configure<BlobStorageSettings>(Configuration.GetSection("BlobStorageSettings"));
 
             services.AddAuthentication(o =>
             {
@@ -160,6 +160,15 @@ namespace Sds.Storage.Blob.WebApi
             loggerFactory.AddConsole(Configuration.GetSection("Logging"));
             loggerFactory.AddDebug();
             loggerFactory.AddSerilog();
+            app.UseExceptionHandler(options =>
+            {
+                options.Run(async context =>
+                {
+                    context.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
+                    await context.Response.WriteAsync("Internal server error. Try again letter");
+                });
+            });
+
             app.UseBlobStorageMiddleware();
             app.UseStaticFiles();
             app.UseAuthentication();

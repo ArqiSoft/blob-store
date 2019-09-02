@@ -26,6 +26,8 @@ namespace Sds.Storage.Blob.WebApi.Middlewares
             {
                 context.Response.StatusCode = (int)HttpStatusCode.RequestEntityTooLarge;
             }
+
+            await _next(context);
         }
     }
 
