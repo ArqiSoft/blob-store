@@ -55,7 +55,7 @@ namespace Sds.Storage.Blob.WebApi.IntegrationTests
             DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token.access_token);
         }
 
-        public async Task<Guid> Upload(string bucket, string filePath, IDictionary<string, object> metadata = null)
+        public async Task<HttpResponseMessage> UploadFile(string bucket, string filePath, IDictionary<string, object> metadata = null)
         {
             if (!File.Exists(filePath))
                 throw new FileNotFoundException(filePath);
@@ -79,7 +79,12 @@ namespace Sds.Storage.Blob.WebApi.IntegrationTests
             fileContent.Headers.ContentType = MediaTypeHeaderValue.Parse("application/octet-stream");
             requestContent.Add(fileContent, "File", Path.GetFileName(filePath));
 
-            HttpResponseMessage response = await PostAsync(new Uri(BaseUri, bucket), requestContent);
+            return await PostAsync(new Uri(BaseUri, bucket), requestContent);
+        }
+
+        public async Task<Guid> Upload(string bucket, string filePath, IDictionary<string, object> metadata = null)
+        {
+            HttpResponseMessage response = await UploadFile(bucket, filePath, metadata);
 
             if (response.StatusCode != System.Net.HttpStatusCode.OK)
             {

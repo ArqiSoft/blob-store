@@ -9,6 +9,7 @@
   <ItemGroup>
     <PackageReference Include="Collector.Serilog.Enrichers.Assembly" Version="1.0.1" />
     <PackageReference Include="FluentAssertions" Version="5.4.2" />
+    <PackageReference Include="Flurl.Http" Version="2.4.2" />
     <PackageReference Include="MassTransit.RabbitMQ" Version="5.1.5" />
     <PackageReference Include="MassTransit.SerilogIntegration" Version="5.1.4" />
     <PackageReference Include="Microsoft.Extensions.Configuration" Version="2.1.1" />
@@ -35,6 +36,9 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Update="Resources\Aspirin.mol">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="Resources\TooBig.mol">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
   </ItemGroup>

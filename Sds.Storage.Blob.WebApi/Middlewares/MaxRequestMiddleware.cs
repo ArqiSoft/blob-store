@@ -2,7 +2,6 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Options;
 using Sds.Storage.Blob.WebApi.Settings;
-using Serilog;
 using System;
 using System.Net;
 using System.Threading.Tasks;
@@ -25,6 +24,7 @@ namespace Sds.Storage.Blob.WebApi.Middlewares
             if (context.Request.ContentLength > _settings.MaxRequestSize)
             {
                 context.Response.StatusCode = (int)HttpStatusCode.RequestEntityTooLarge;
+                return;
             }
 
             await _next(context);

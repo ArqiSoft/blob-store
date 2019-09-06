@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Configuration;
+﻿using Flurl;
+using Microsoft.Extensions.Configuration;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
@@ -25,7 +26,7 @@ namespace Sds.Storage.Blob.WebApi.IntegrationTests
 
     public class KeyCloakClient : HttpClient
     {
-        public Uri Authority { get; }
+        public string Authority { get; }
         public string ClientId { get; private set; }
         public string ClientSecret { get; private set; }
 
@@ -36,14 +37,8 @@ namespace Sds.Storage.Blob.WebApi.IntegrationTests
                 .AddEnvironmentVariables()
                 .Build();
 
-            Authority = new Uri(Environment.ExpandEnvironmentVariables(configuration["KeyCloak:Authority"]));
+            Authority = Environment.ExpandEnvironmentVariables(configuration["KeyCloak:Authority"]);
 
-            SetClient(clientId, secret);
-        }
-
-        public KeyCloakClient(Uri authority, string clientId, string secret) : base()
-        {
-            Authority = authority;
             SetClient(clientId, secret);
         }
 
@@ -62,7 +57,7 @@ namespace Sds.Storage.Blob.WebApi.IntegrationTests
             nvc.Add(new KeyValuePair<string, string>("password", password));
             nvc.Add(new KeyValuePair<string, string>("grant_type", "password"));
 
-            var request = new HttpRequestMessage(HttpMethod.Post, new Uri(Authority, "protocol/openid-connect/token")) { Content = new FormUrlEncodedContent(nvc) };
+            var request = new HttpRequestMessage(HttpMethod.Post, new Uri(Url.Combine(Authority, "protocol/openid-connect/token"))) { Content = new FormUrlEncodedContent(nvc) };
 
             var response = await SendAsync(request);
             var json = await response.Content.ReadAsStringAsync();
@@ -75,7 +70,7 @@ namespace Sds.Storage.Blob.WebApi.IntegrationTests
             var nvc = new List<System.Collections.Generic.KeyValuePair<string, string>>();
             nvc.Add(new KeyValuePair<string, string>("grant_type", "client_credentials"));
 
-            var request = new HttpRequestMessage(HttpMethod.Post, new Uri(Authority, "protocol/openid-connect/token")) { Content = new FormUrlEncodedContent(nvc) };
+            var request = new HttpRequestMessage(HttpMethod.Post, new Uri(Url.Combine(Authority, "protocol/openid-connect/token"))) { Content = new FormUrlEncodedContent(nvc) };
 
             var json = await SendAsync(request).Result.Content.ReadAsStringAsync();
 
@@ -93,7 +88,7 @@ namespace Sds.Storage.Blob.WebApi.IntegrationTests
         {
             DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
-            var userInfoResponse = await GetAsync(new Uri(Authority, "protocol/openid-connect/userinfo"));
+            var userInfoResponse = await GetAsync(new Uri(Url.Combine(Authority, "protocol/openid-connect/token")));
 
             var json = await userInfoResponse.Content.ReadAsStringAsync();
 
