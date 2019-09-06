@@ -1,7 +1,9 @@
-﻿using Sds.Storage.Blob.WebApi.IntegrationTests;
+﻿using FluentAssertions;
+using Sds.Storage.Blob.WebApi.IntegrationTests;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Net;
 using System.Threading.Tasks;
 using Xunit;
 using Xunit.Abstractions;
@@ -27,9 +29,9 @@ namespace Sds.Storage.Blob.WebApi.Tests.Tests
                 var filePath = Path.Combine(Directory.GetCurrentDirectory(), "Resources", "TooBig.mol");
 
                 var response = await blobStorage.UploadFile(Harness.JohnId.ToString(), filePath, new Dictionary<string, object>() { { "parentId", Harness.JohnId } });
-            }
 
-            await Task.CompletedTask;
+                response.StatusCode.Should().Be(HttpStatusCode.RequestEntityTooLarge);
+            }
         }
     }
 }

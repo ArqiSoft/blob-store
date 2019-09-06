@@ -16,7 +16,6 @@ using Sds.MassTransit.Observers;
 using Sds.Storage.Blob.Core;
 using Sds.Storage.Blob.GridFs;
 using Sds.Storage.Blob.WebApi.Converters;
-using Sds.Storage.Blob.WebApi.Middlewares;
 using Sds.Storage.Blob.WebApi.Settings;
 using Sds.Storage.Blob.WebApi.Swagger;
 using Serilog;
@@ -24,7 +23,6 @@ using Swashbuckle.AspNetCore.Swagger;
 using System;
 using System.ComponentModel;
 using System.IO;
-using System.Net;
 using System.Threading.Tasks;
 
 namespace Sds.Storage.Blob.WebApi
@@ -151,25 +149,11 @@ namespace Sds.Storage.Blob.WebApi
             });
             services.AddMvc()
                 .AddJsonOptions(opt => opt.SerializerSettings.Formatting = Newtonsoft.Json.Formatting.Indented);
-
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline
         public void Configure(IApplicationBuilder app, IHostingEnvironment env, ILoggerFactory loggerFactory, IApplicationLifetime appLifetime)
         {
-            loggerFactory.AddConsole(Configuration.GetSection("Logging"));
-            loggerFactory.AddDebug();
-            loggerFactory.AddSerilog();
-            app.UseExceptionHandler(options =>
-            {
-                options.Run(async context =>
-                {
-                    context.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
-                    await context.Response.WriteAsync("Internal server error. Try again letter");
-                });
-            });
-
-            app.UseBlobStorageMiddleware();
             app.UseStaticFiles();
             app.UseAuthentication();
 

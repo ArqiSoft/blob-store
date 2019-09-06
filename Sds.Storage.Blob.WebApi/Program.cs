@@ -1,7 +1,8 @@
-﻿using System.IO;
-using Microsoft.AspNetCore.Hosting;
+﻿using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
-using System.Security.Cryptography.X509Certificates;
+using Microsoft.Extensions.Options;
+using Sds.Storage.Blob.WebApi.Settings;
+using System.IO;
 
 namespace Sds.Storage.Blob.WebApi
 {
@@ -13,17 +14,18 @@ namespace Sds.Storage.Blob.WebApi
                 .AddCommandLine(args)
                 .Build();
 
-            //var cert = new X509Certificate2("osdr.pfx", "your-company");
-
             var host = new WebHostBuilder()
                 .UseContentRoot(Directory.GetCurrentDirectory())
                 .UseConfiguration(configuration)
                 .UseIISIntegration()
                 .UseKestrel(cfg => {
-                    //cfg.UseHttps(cert);
+                    var settings = cfg.ApplicationServices.GetService(typeof(IOptions<BlobStorageSettings>)) as IOptions<BlobStorageSettings>;
+                    if (settings != null)
+                    {
+                        cfg.Limits.MaxRequestBodySize = settings.Value?.MaxRequestSize;
+                    }
                 })
                 .UseStartup<Startup>()
-                //.UseApplicationInsights()
                 .Build();
 
             host.Run();
