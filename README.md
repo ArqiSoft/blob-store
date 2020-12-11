@@ -2,4 +2,4 @@
 
 Leanda BLOB Storage
 
-[![Build Status](https://travis-ci.org/ArqiSoft/blob-store.svg?branch=master)](https://travis-ci.org/ArqiSoft/blob-store)
+[![Build Status](https://travis-ci.com/ArqiSoft/blob-store.svg?branch=master)](https://travis-ci.com/ArqiSoft/blob-store)
